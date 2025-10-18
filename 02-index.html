@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pide Tu Delivery</title>
+<style>
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  background: #000;
+  color: #fff;
+  text-align: center;
+}
+
+.container {
+  max-width: 400px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.logo {
+  background: #999;
+  color: white;
+  padding: 40px;
+  font-size: 24px;
+  margin-bottom: 20px;
+}
+
+h2 {
+  color: white;
+  margin-bottom: 20px;
+}
+
+.form-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 5px 0;
+}
+
+.label {
+  background: #ffa500;
+  color: black;
+  flex: 1;
+  padding: 10px;
+  border-radius: 4px 0 0 4px;
+  font-weight: bold;
+}
+
+select {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  border-radius: 0 4px 4px 0;
+  text-align: center;
+  background: #f5f5f5;
+  color: #000;
+}
+
+.resultados {
+  background: #ccc;
+  color: black;
+  font-weight: bold;
+  padding: 10px;
+  margin-top: 15px;
+  border-radius: 5px;
+}
+
+.business-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 6px 0;
+}
+
+.business-name {
+  background: #ffa500;
+  color: black;
+  flex: 1;
+  padding: 8px;
+  border-radius: 4px 0 0 4px;
+}
+
+.business-link a {
+  background: #00ff00;
+  color: black;
+  text-decoration: none;
+  padding: 8px;
+  display: block;
+  border-radius: 0 4px 4px 0;
+  font-weight: bold;
+}
+
+.business-link a:hover {
+  background: #00cc00;
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="logo">GUIA-DE-CLICKAPP</div>
+  <h2>Pide Tu Delivery</h2>
+
+  <div class="form-row"><div class="label">Provincia</div><select id="provincia"></select></div>
+  <div class="form-row"><div class="label">Ciudad</div><select id="ciudad"></select></div>
+  <div class="form-row"><div class="label">Localidad</div><select id="localidad"></select></div>
+  <div class="form-row"><div class="label">Rubro</div><select id="rubro"></select></div>
+  <div class="form-row"><div class="label">Productos</div><select id="producto"></select></div>
+
+  <div class="resultados">Resultados</div>
+  <div id="resultados"></div>
+</div>
+
+<script>
+const SHEET_URL = "https://docs.google.com/spreadsheets/d/1IQ5U51W1yvCEmO56dP4-jOnXTuWnbRUuWhOG7U4-UL8/gviz/tq?tqx=out:json";
+let datos = [];
+
+fetch(SHEET_URL)
+  .then(res => res.text())
+  .then(txt => {
+    const json = JSON.parse(txt.substr(47).slice(0, -2));
+    datos = json.table.rows.map(r => ({
+      rubro: r.c[0]?.v || "",
+      provincia: r.c[1]?.v || "",
+      ciudad: r.c[2]?.v || "",
+      localidad: r.c[3]?.v || "",
+      nombre: r.c[6]?.v || "",
+      whatsapp: r.c[7]?.v || "",
+      productos: r.c[8]?.v || ""
+    }));
+    cargarSelect("provincia", [...new Set(datos.map(d => d.provincia))]);
+  });
+
+function cargarSelect(id, valores) {
+  const sel = document.getElementById(id);
+  sel.innerHTML = '<option value="">Seleccionar</option>' +
+    valores.sort().map(v => `<option value="${v}">${v}</option>`).join('');
+}
+
+// Eventos encadenados
+document.getElementById("provincia").addEventListener("change", e => {
+  const val = e.target.value;
+  const ciudades = [...new Set(datos.filter(d => d.provincia === val).map(d => d.ciudad))];
+  cargarSelect("ciudad", ciudades);
+  document.getElementById("localidad").innerHTML = '<option value="">Seleccionar</option>';
+  document.getElementById("rubro").innerHTML = '<option value="">Seleccionar</option>';
+  document.getElementById("producto").innerHTML = '<option value="">Seleccionar</option>';
+  mostrarResultados();
+});
+
+document.getElementById("ciudad").addEventListener("change", e => {
+  const val = e.target.value;
+  const locs = [...new Set(datos.filter(d => d.ciudad === val).map(d => d.localidad))];
+  cargarSelect("localidad", locs);
+  const rubros = [...new Set(datos.filter(d => d.ciudad === val).map(d => d.rubro))];
+  cargarSelect("rubro", rubros);
+  document.getElementById("producto").innerHTML = '<option value="">Seleccionar</option>';
+  mostrarResultados();
+});
+
+document.getElementById("localidad").addEventListener("change", e => {
+  const val = e.target.value;
+  const rubros = [...new Set(datos.filter(d => d.localidad === val).map(d => d.rubro))];
+  cargarSelect("rubro", rubros);
+  mostrarResultados();
+});
+
+document.getElementById("rubro").addEventListener("change", e => {
+  const val = e.target.value;
+  const productos = [...new Set(datos.filter(d => d.rubro === val).map(d => d.productos))];
+  cargarSelect("producto", productos);
+  mostrarResultados();
+});
+
+document.getElementById("producto").addEventListener("change", mostrarResultados);
+
+function mostrarResultados() {
+  const p = provincia.value;
+  const c = ciudad.value;
+  const l = localidad.value;
+  const r = rubro.value;
+  const prod = producto.value;
+
+  let filtrado = datos;
+  if (p) filtrado = filtrado.filter(d => d.provincia === p);
+  if (c) filtrado = filtrado.filter(d => d.ciudad === c);
+  if (l) filtrado = filtrado.filter(d => d.localidad === l);
+  if (r) filtrado = filtrado.filter(d => d.rubro === r);
+  if (prod) filtrado = filtrado.filter(d => d.productos.includes(prod));
+
+  const cont = document.getElementById("resultados");
+  if (filtrado.length === 0) {
+    cont.innerHTML = "<p>No se encontraron resultados.</p>";
+    return;
+  }
+
+  cont.innerHTML = filtrado.map(d => `
+    <div class="business-card">
+      <div class="business-name">${d.nombre}</div>
+      <div class="business-link"><a href="${d.whatsapp}" target="_blank">enlace Whatsapp</a></div>
+    </div>
+  `).join('');
+}
+</script>
+</body>
+</html>
