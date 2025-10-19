@@ -102,11 +102,11 @@ select {
   <div class="logo">GUIA-DE-CLICKAPP</div>
   <h2>Pide Tu Delivery</h2>
 
+  <div class="form-row"><div class="label">Rubro</div><select id="rubro"></select></div>
+  <div class="form-row"><div class="label">Producto</div><select id="producto"></select></div>
   <div class="form-row"><div class="label">Provincia</div><select id="provincia"></select></div>
   <div class="form-row"><div class="label">Ciudad</div><select id="ciudad"></select></div>
   <div class="form-row"><div class="label">Localidad</div><select id="localidad"></select></div>
-  <div class="form-row"><div class="label">Rubro</div><select id="rubro"></select></div>
-  <div class="form-row"><div class="label">Productos</div><select id="producto"></select></div>
 
   <div class="resultados">Resultados</div>
   <div id="resultados"></div>
@@ -129,7 +129,8 @@ fetch(SHEET_URL)
       whatsapp: r.c[7]?.v || "",
       productos: r.c[8]?.v || ""
     }));
-    cargarSelect("provincia", [...new Set(datos.map(d => d.provincia))]);
+
+    cargarSelect("rubro", [...new Set(datos.map(d => d.rubro))]);
   });
 
 function cargarSelect(id, valores) {
@@ -139,55 +140,58 @@ function cargarSelect(id, valores) {
 }
 
 // Eventos encadenados
+document.getElementById("rubro").addEventListener("change", e => {
+  const val = e.target.value;
+  const productos = [...new Set(datos.filter(d => d.rubro === val).map(d => d.productos))];
+  cargarSelect("producto", productos);
+  limpiarSelects(["provincia", "ciudad", "localidad"]);
+  mostrarResultados();
+});
+
+document.getElementById("producto").addEventListener("change", e => {
+  const val = e.target.value;
+  const provincias = [...new Set(datos.filter(d => d.productos.includes(val)).map(d => d.provincia))];
+  cargarSelect("provincia", provincias);
+  limpiarSelects(["ciudad", "localidad"]);
+  mostrarResultados();
+});
+
 document.getElementById("provincia").addEventListener("change", e => {
   const val = e.target.value;
   const ciudades = [...new Set(datos.filter(d => d.provincia === val).map(d => d.ciudad))];
   cargarSelect("ciudad", ciudades);
-  document.getElementById("localidad").innerHTML = '<option value="">Seleccionar</option>';
-  document.getElementById("rubro").innerHTML = '<option value="">Seleccionar</option>';
-  document.getElementById("producto").innerHTML = '<option value="">Seleccionar</option>';
+  limpiarSelects(["localidad"]);
   mostrarResultados();
 });
 
 document.getElementById("ciudad").addEventListener("change", e => {
   const val = e.target.value;
-  const locs = [...new Set(datos.filter(d => d.ciudad === val).map(d => d.localidad))];
-  cargarSelect("localidad", locs);
-  const rubros = [...new Set(datos.filter(d => d.ciudad === val).map(d => d.rubro))];
-  cargarSelect("rubro", rubros);
-  document.getElementById("producto").innerHTML = '<option value="">Seleccionar</option>';
+  const localidades = [...new Set(datos.filter(d => d.ciudad === val).map(d => d.localidad))];
+  cargarSelect("localidad", localidades);
   mostrarResultados();
 });
 
-document.getElementById("localidad").addEventListener("change", e => {
-  const val = e.target.value;
-  const rubros = [...new Set(datos.filter(d => d.localidad === val).map(d => d.rubro))];
-  cargarSelect("rubro", rubros);
-  mostrarResultados();
-});
+document.getElementById("localidad").addEventListener("change", mostrarResultados);
 
-document.getElementById("rubro").addEventListener("change", e => {
-  const val = e.target.value;
-  const productos = [...new Set(datos.filter(d => d.rubro === val).map(d => d.productos))];
-  cargarSelect("producto", productos);
-  mostrarResultados();
-});
-
-document.getElementById("producto").addEventListener("change", mostrarResultados);
+function limpiarSelects(ids) {
+  ids.forEach(id => {
+    document.getElementById(id).innerHTML = '<option value="">Seleccionar</option>';
+  });
+}
 
 function mostrarResultados() {
+  const r = rubro.value;
+  const prod = producto.value;
   const p = provincia.value;
   const c = ciudad.value;
   const l = localidad.value;
-  const r = rubro.value;
-  const prod = producto.value;
 
   let filtrado = datos;
+  if (r) filtrado = filtrado.filter(d => d.rubro === r);
+  if (prod) filtrado = filtrado.filter(d => d.productos.includes(prod));
   if (p) filtrado = filtrado.filter(d => d.provincia === p);
   if (c) filtrado = filtrado.filter(d => d.ciudad === c);
   if (l) filtrado = filtrado.filter(d => d.localidad === l);
-  if (r) filtrado = filtrado.filter(d => d.rubro === r);
-  if (prod) filtrado = filtrado.filter(d => d.productos.includes(prod));
 
   const cont = document.getElementById("resultados");
   if (filtrado.length === 0) {
